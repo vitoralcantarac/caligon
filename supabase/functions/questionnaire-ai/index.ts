@@ -148,8 +148,8 @@ serve(async (req) => {
 
   try {
     const { action, context } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
 
     if (action === "run_qualification") {
       const { companyName, niche, qualAnswers, totalScore, level } = context;
@@ -180,33 +180,33 @@ Responda APENAS com JSON válido (sem markdown, sem texto fora do JSON):
   "recommendation": "Uma frase direta sobre o próximo passo ideal para esta empresa"
 }`;
 
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 2048,
+          system: systemPrompt,
           messages: [
-            { role: "system", content: systemPrompt },
             { role: "user", content: "Gere a análise de qualificação." },
           ],
           temperature: 0.5,
-          response_format: { type: "json_object" },
         }),
       });
 
       if (!response.ok) {
         const errBody = await response.text().catch(() => "");
-        console.error("[run_qualification] Gateway error:", response.status, errBody);
+        console.error("[run_qualification] Anthropic error:", response.status, errBody);
         if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (response.status === 402) return new Response(JSON.stringify({ error: "Credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        throw new Error(`AI Gateway error ${response.status}: ${errBody.slice(0, 200)}`);
+        throw new Error(`Anthropic API error ${response.status}: ${errBody.slice(0, 200)}`);
       }
 
       const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || "";
+      const content = data.content?.[0]?.text || "";
       let parsed: any;
       try {
         parsed = JSON.parse(content);
@@ -424,16 +424,18 @@ Responda APENAS em JSON:
   "confidence": "high" | "medium" | "low"
 }`;
 
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 1024,
+          system: systemPrompt,
           messages: [
-            { role: "system", content: systemPrompt },
             { role: "user", content: "Gere a próxima pergunta do questionário." },
           ],
           temperature: 0.7,
@@ -442,12 +444,11 @@ Responda APENAS em JSON:
 
       if (!response.ok) {
         if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (response.status === 402) return new Response(JSON.stringify({ error: "Credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        throw new Error(`AI Gateway error: ${response.status}`);
+        throw new Error(`Anthropic API error: ${response.status}`);
       }
 
       const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || "";
+      const content = data.content?.[0]?.text || "";
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error("Failed to parse AI response");
       const parsed = JSON.parse(jsonMatch[0]);
@@ -735,33 +736,33 @@ Retorne JSON com esta estrutura EXATA:
   }
 }`;
 
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "claude-sonnet-4-6",
+          max_tokens: 8192,
+          system: systemPrompt,
           messages: [
-            { role: "system", content: systemPrompt },
             { role: "user", content: "Execute o diagnóstico completo. Retorne APENAS JSON válido contendo TODOS os campos do schema, com bottlenecks (mínimo 3), recommendations (mínimo 3), scores e os dois fluxogramas. Não trunque o JSON." },
           ],
           temperature: 0.3,
-          response_format: { type: "json_object" },
         }),
       });
 
       if (!response.ok) {
         const errBody = await response.text().catch(() => "");
-        console.error("[run_diagnosis] Gateway error:", response.status, errBody);
+        console.error("[run_diagnosis] Anthropic error:", response.status, errBody);
         if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (response.status === 402) return new Response(JSON.stringify({ error: "Credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        throw new Error(`AI error ${response.status}: ${errBody.slice(0, 200)}`);
+        throw new Error(`Anthropic API error ${response.status}: ${errBody.slice(0, 200)}`);
       }
 
       const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || "";
+      const content = data.content?.[0]?.text || "";
       let parsed: any;
       try {
         parsed = JSON.parse(content);

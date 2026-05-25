@@ -1,36 +1,47 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import AppLayout from "./components/layout/AppLayout";
-import Dashboard from "./pages/Dashboard";
-import Clients from "./pages/Clients";
-import Analyses from "./pages/Analyses";
-import AnalysisDetail from "./pages/AnalysisDetail";
-import NewAnalysis from "./pages/NewAnalysis";
-import SettingsPage from "./pages/SettingsPage";
-import Questionnaire from "./pages/Questionnaire";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
-// Painel do cliente
+// Layouts (carregados imediatamente — necessários para o shell da aplicação)
+import AppLayout from "./components/layout/AppLayout";
 import ClientLayout from "./components/client/ClientLayout";
-import ClientSignup from "./pages/client/ClientSignup";
-import ClientLogin from "./pages/client/ClientLogin";
-import ClientDashboard from "./pages/client/ClientDashboard";
-import ClientNewDiagnosis from "./pages/client/ClientNewDiagnosis";
-import ClientQuestionnaire from "./pages/client/ClientQuestionnaire";
-import ClientResult from "./pages/client/ClientResult";
-import ClientPlans from "./pages/client/ClientPlans";
-import ClientAccount from "./pages/client/ClientAccount";
+
+// Painel interno — carregado sob demanda
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Clients = lazy(() => import("./pages/Clients"));
+const Analyses = lazy(() => import("./pages/Analyses"));
+const AnalysisDetail = lazy(() => import("./pages/AnalysisDetail"));
+const NewAnalysis = lazy(() => import("./pages/NewAnalysis"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const Questionnaire = lazy(() => import("./pages/Questionnaire"));
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Painel do cliente — carregado sob demanda
+const ClientSignup = lazy(() => import("./pages/client/ClientSignup"));
+const ClientLogin = lazy(() => import("./pages/client/ClientLogin"));
+const ClientDashboard = lazy(() => import("./pages/client/ClientDashboard"));
+const ClientNewDiagnosis = lazy(() => import("./pages/client/ClientNewDiagnosis"));
+const ClientQuestionnaire = lazy(() => import("./pages/client/ClientQuestionnaire"));
+const ClientResult = lazy(() => import("./pages/client/ClientResult"));
+const ClientPlans = lazy(() => import("./pages/client/ClientPlans"));
+const ClientAccount = lazy(() => import("./pages/client/ClientAccount"));
 
 const queryClient = new QueryClient();
+
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+  </div>
+);
 
 function ProtectedRoute({ children, requireInternal = false }: { children: React.ReactNode; requireInternal?: boolean }) {
   const { user, loading, profile } = useAuth();
@@ -54,39 +65,41 @@ const App = () => (
       <Sonner />
       <HashRouter>
         <AuthProvider>
-          <Routes>
-            {/* Public — internal */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Public — internal */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Public — client */}
-            <Route path="/cadastro" element={<ClientSignup />} />
-            <Route path="/entrar" element={<ClientLogin />} />
+              {/* Public — client */}
+              <Route path="/cadastro" element={<ClientSignup />} />
+              <Route path="/entrar" element={<ClientLogin />} />
 
-            {/* Client panel (protected) */}
-            <Route element={<ProtectedRoute><ClientLayout /></ProtectedRoute>}>
-              <Route path="/dashboard" element={<ClientDashboard />} />
-              <Route path="/novo-diagnostico" element={<ClientNewDiagnosis />} />
-              <Route path="/questionario/:analysisId" element={<ClientQuestionnaire />} />
-              <Route path="/resultado/:id" element={<ClientResult />} />
-              <Route path="/planos" element={<ClientPlans />} />
-              <Route path="/minha-conta" element={<ClientAccount />} />
-            </Route>
+              {/* Client panel (protected) */}
+              <Route element={<ProtectedRoute><ClientLayout /></ProtectedRoute>}>
+                <Route path="/dashboard" element={<ClientDashboard />} />
+                <Route path="/novo-diagnostico" element={<ClientNewDiagnosis />} />
+                <Route path="/questionario/:analysisId" element={<ClientQuestionnaire />} />
+                <Route path="/resultado/:id" element={<ClientResult />} />
+                <Route path="/planos" element={<ClientPlans />} />
+                <Route path="/minha-conta" element={<ClientAccount />} />
+              </Route>
 
-            {/* Internal panel (protected, internal only) */}
-            <Route element={<ProtectedRoute requireInternal><AppLayout /></ProtectedRoute>}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/clients" element={<Clients />} />
-              <Route path="/analyses" element={<Analyses />} />
-              <Route path="/analyses/new" element={<NewAnalysis />} />
-              <Route path="/analyses/:id" element={<AnalysisDetail />} />
-              <Route path="/analyses/:analysisId/questionnaire" element={<Questionnaire />} />
-              <Route path="/settings" element={<SettingsPage />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              {/* Internal panel (protected, internal only) */}
+              <Route element={<ProtectedRoute requireInternal><AppLayout /></ProtectedRoute>}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/clients" element={<Clients />} />
+                <Route path="/analyses" element={<Analyses />} />
+                <Route path="/analyses/new" element={<NewAnalysis />} />
+                <Route path="/analyses/:id" element={<AnalysisDetail />} />
+                <Route path="/analyses/:analysisId/questionnaire" element={<Questionnaire />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </AuthProvider>
       </HashRouter>
     </TooltipProvider>

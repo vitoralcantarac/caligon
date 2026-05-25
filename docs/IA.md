@@ -18,13 +18,15 @@ A IA do Caligon é baseada na **Claude API da Anthropic** e opera exclusivamente
 | Controle de fluxogramas | `FlowEditor.tsx` | Editor visual React Flow — interação humana, sem IA |
 | Score de qualificação | `NewAnalysis.tsx` | Soma ponderada das respostas do questionário de qualificação |
 
-### Processado pela IA (Claude API)
+### Processado pela IA (Claude API — Anthropic)
 
-| Funcionalidade | Ação na Edge Function | Entrada | Saída |
-|---------------|----------------------|---------|-------|
-| Perguntas adaptativas | `generate_question` | Histórico de respostas, niche, métricas, documentos OCR | Próxima pergunta contextualizada |
-| Relatório de qualificação | `run_qualification` | 10 respostas do pré-diagnóstico | Score, nível, análise textual |
-| Diagnóstico completo | `run_diagnosis` | Todas as respostas + métricas + documentos | Scores, gargalos, recomendações, fluxogramas, resumo |
+| Funcionalidade | Ação na Edge Function | Modelo Claude | Entrada | Saída |
+|---------------|----------------------|--------------|---------|-------|
+| Perguntas adaptativas | `generate_question` | claude-haiku-4-5 | Histórico de respostas, niche, métricas, documentos OCR | Próxima pergunta contextualizada |
+| Relatório de qualificação | `run_qualification` | claude-haiku-4-5 | 10 respostas do pré-diagnóstico | Score, nível, análise textual |
+| Diagnóstico completo | `run_diagnosis` | claude-sonnet-4-6 | Todas as respostas + métricas + documentos | Scores, gargalos, recomendações, fluxogramas, resumo |
+
+> `claude-haiku-4-5` é usado nas ações de resposta rápida (perguntas, qualificação) por ser mais veloz e econômico. `claude-sonnet-4-6` é reservado para o diagnóstico completo, que exige maior capacidade de raciocínio e produz respostas longas com JSON estruturado.
 
 ## Edge Function: questionnaire-ai
 
