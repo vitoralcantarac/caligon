@@ -106,7 +106,6 @@ export default function ClientResult() {
       toast.success("PDF gerado com sucesso!");
     } catch (err: any) {
       toast.error(`Erro ao gerar PDF: ${err.message}`);
-      console.error(err);
     } finally {
       setDownloadingPdf(false);
     }

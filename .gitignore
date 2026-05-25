@@ -17,6 +17,9 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 
+# Supabase CLI — arquivos temporários de sessão local (contêm Project Ref e URLs internas)
+supabase/.temp/
+
 # Editor
 .vscode/*
 !.vscode/extensions.json
