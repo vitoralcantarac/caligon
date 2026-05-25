@@ -1,0 +1,229 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=DM+Serif+Display&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* CALIGON Premium Executive Design System */
+    --background: 220 20% 97%;
+    --foreground: 220 30% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 10%;
+
+    --primary: 220 25% 14%;
+    --primary-foreground: 42 100% 95%;
+
+    --secondary: 220 15% 92%;
+    --secondary-foreground: 220 25% 14%;
+
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 10% 46%;
+
+    --accent: 42 92% 56%;
+    --accent-foreground: 220 25% 10%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+    --ring: 42 92% 56%;
+
+    --radius: 0.5rem;
+
+    /* CALIGON Custom Tokens */
+    --gold: 42 92% 56%;
+    --gold-light: 42 90% 72%;
+    --gold-dark: 42 85% 42%;
+    --navy: 220 25% 14%;
+    --navy-light: 220 20% 22%;
+    --navy-muted: 220 15% 35%;
+    --slate-bg: 220 20% 97%;
+    --success: 152 60% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 210 80% 55%;
+    --info-foreground: 0 0% 100%;
+
+    /* Sidebar */
+    --sidebar-background: 220 25% 12%;
+    --sidebar-foreground: 220 10% 75%;
+    --sidebar-primary: 42 92% 56%;
+    --sidebar-primary-foreground: 220 25% 10%;
+    --sidebar-accent: 220 20% 18%;
+    --sidebar-accent-foreground: 220 10% 90%;
+    --sidebar-border: 220 20% 20%;
+    --sidebar-ring: 42 92% 56%;
+
+    /* Gradients */
+    --gradient-gold: linear-gradient(135deg, hsl(42, 92%, 56%), hsl(42, 85%, 42%));
+    --gradient-navy: linear-gradient(135deg, hsl(220, 25%, 14%), hsl(220, 30%, 22%));
+    --gradient-premium: linear-gradient(135deg, hsl(220, 25%, 14%), hsl(220, 20%, 22%), hsl(42, 40%, 25%));
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(220 25% 14% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(220 25% 14% / 0.08), 0 2px 4px -2px hsl(220 25% 14% / 0.05);
+    --shadow-lg: 0 10px 15px -3px hsl(220 25% 14% / 0.08), 0 4px 6px -4px hsl(220 25% 14% / 0.04);
+    --shadow-gold: 0 4px 14px -2px hsl(42 92% 56% / 0.25);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: 'DM Serif Display', serif;
+  }
+}
+
+@layer components {
+  .card-premium {
+    @apply bg-card rounded-lg border border-border;
+    box-shadow: var(--shadow-md);
+  }
+
+  .badge-gold {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    background: hsl(var(--gold) / 0.12);
+    color: hsl(var(--gold-dark));
+  }
+
+  .badge-success {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    background: hsl(var(--success) / 0.12);
+    color: hsl(var(--success));
+  }
+
+  .badge-warning {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    background: hsl(var(--warning) / 0.12);
+    color: hsl(var(--warning));
+  }
+
+  .badge-destructive {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    background: hsl(var(--destructive) / 0.12);
+    color: hsl(var(--destructive));
+  }
+
+  .badge-info {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    background: hsl(var(--info) / 0.12);
+    color: hsl(var(--info));
+  }
+
+  .stat-card {
+    @apply card-premium p-5 transition-all duration-200 hover:shadow-lg;
+  }
+
+  .btn-gold {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition-all duration-200;
+    background: var(--gradient-gold);
+    color: hsl(var(--navy));
+    box-shadow: var(--shadow-gold);
+  }
+
+  .btn-gold:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+
+  .btn-navy {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition-all duration-200;
+    background: var(--gradient-navy);
+    color: hsl(var(--primary-foreground));
+  }
+
+  .btn-navy:hover {
+    filter: brightness(1.15);
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer;
+    color: hsl(var(--sidebar-foreground));
+  }
+
+  .sidebar-item:hover {
+    background: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-accent-foreground));
+  }
+
+  .sidebar-item.active {
+    background: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-primary));
+  }
+
+  .progress-bar {
+    @apply h-2 rounded-full overflow-hidden;
+    background: hsl(var(--muted));
+  }
+
+  .progress-bar-fill {
+    @apply h-full rounded-full transition-all duration-500;
+    background: var(--gradient-gold);
+  }
+
+  .score-ring {
+    @apply relative inline-flex items-center justify-center;
+  }
+
+  .table-premium {
+    @apply w-full text-sm;
+  }
+
+  .table-premium thead th {
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider;
+    color: hsl(var(--muted-foreground));
+    border-bottom: 2px solid hsl(var(--border));
+  }
+
+  .table-premium tbody td {
+    @apply px-4 py-3.5 border-b border-border;
+  }
+
+  .table-premium tbody tr:hover {
+    background: hsl(var(--muted) / 0.5);
+  }
+}
+
+/* React Flow custom styles */
+.react-flow__node {
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+.react-flow__controls button {
+  background: hsl(var(--card)) !important;
+  border-color: hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply rounded-full;
+  background: hsl(var(--border));
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.3);
+}
