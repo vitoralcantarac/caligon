@@ -1,7 +1,29 @@
 # Caligon
 
-nome do projeto: CALIGON
-nomes completos dos integrantes: Ugo Pirangi, João cesar Fernandes, Vitor Alcântara e Paulo Jesus
-descrição geral da solução: Uma plataforma web de inteligência de negócios voltada ao diagnóstico operacional e financeiro de pequenas e médias empresas brasileiras (PMEs). 
-link para documentação complementar: https://www.notion.so/CALIGON-3305264f8d1980b7934fe76b4998484c?source=copy_link
-instruções básicas de execução: Cadastrar a empresa - informar processos a serem analisados - responder ao questionário.
+Plataforma de inteligência empresarial com IA para diagnóstico operacional e financeiro de PMEs brasileiras.
+
+## Equipe
+
+- Ugo Pirangi
+- João Cesar Fernandes
+- Vitor Alcântara
+- Paulo Jesus
+
+## Sobre
+
+Caligon é uma plataforma web que realiza diagnóstico operacional e financeiro de pequenas e médias empresas (PMEs) usando inteligência artificial. O sistema identifica gargalos, calcula perdas financeiras e gera recomendações priorizadas.
+
+## Execução local
+
+```bash
+npm install
+npm run dev
+```
+
+## Deploy
+
+O site é publicado automaticamente no GitHub Pages a cada push na branch `main` via GitHub Actions.
+
+## Documentação
+
+Consulte o arquivo `DOCUMENTACAO_CALIGON.md` para detalhamento completo das funcionalidades.
