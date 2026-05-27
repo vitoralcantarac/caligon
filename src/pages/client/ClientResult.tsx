@@ -380,7 +380,7 @@ export default function ClientResult() {
               <h3 className="font-semibold mb-3">Como foi este diagnóstico para você?</h3>
               <div className="flex gap-1 mb-4">
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <button key={n} type="button" onClick={() => setRating(n)}>
+                  <button key={n} type="button" onClick={() => setRating(n)} aria-label={`Avaliar com ${n} estrela${n > 1 ? "s" : ""}`}>
                     <Star className={`w-8 h-8 ${n <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
                   </button>
                 ))}

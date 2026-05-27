@@ -282,7 +282,7 @@ export default function FlowEditor({ initialNodes: propNodes, initialEdges: prop
         {editable && (
           <Panel position="top-left" className="flex items-center gap-1 bg-card border border-border rounded-lg p-1.5 shadow-sm">
             <div className="relative group">
-              <button className="p-1.5 rounded hover:bg-muted transition-colors" title="Adicionar bloco">
+              <button className="p-1.5 rounded hover:bg-muted transition-colors" title="Adicionar bloco" aria-label="Adicionar bloco">
                 <Plus className="w-4 h-4 text-foreground" />
               </button>
               <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg p-1 hidden group-hover:block z-50 min-w-[140px]">
@@ -294,12 +294,12 @@ export default function FlowEditor({ initialNodes: propNodes, initialEdges: prop
               </div>
             </div>
             <div className="w-px h-5 bg-border" />
-            <button onClick={undo} className="p-1.5 rounded hover:bg-muted transition-colors" title="Desfazer"><Undo2 className="w-4 h-4 text-foreground" /></button>
-            <button onClick={redo} className="p-1.5 rounded hover:bg-muted transition-colors" title="Refazer"><Redo2 className="w-4 h-4 text-foreground" /></button>
+            <button onClick={undo} className="p-1.5 rounded hover:bg-muted transition-colors" title="Desfazer" aria-label="Desfazer"><Undo2 className="w-4 h-4 text-foreground" /></button>
+            <button onClick={redo} className="p-1.5 rounded hover:bg-muted transition-colors" title="Refazer" aria-label="Refazer"><Redo2 className="w-4 h-4 text-foreground" /></button>
             <div className="w-px h-5 bg-border" />
-            <button onClick={autoLayout} className="p-1.5 rounded hover:bg-muted transition-colors" title="Auto Layout"><Layout className="w-4 h-4 text-foreground" /></button>
+            <button onClick={autoLayout} className="p-1.5 rounded hover:bg-muted transition-colors" title="Auto Layout" aria-label="Auto Layout"><Layout className="w-4 h-4 text-foreground" /></button>
             <div className="w-px h-5 bg-border" />
-            <button onClick={handleSave} className="p-1.5 rounded hover:bg-muted text-success transition-colors" title="Salvar"><Save className="w-4 h-4" /></button>
+            <button onClick={handleSave} className="p-1.5 rounded hover:bg-muted text-success transition-colors" title="Salvar" aria-label="Salvar"><Save className="w-4 h-4" /></button>
           </Panel>
         )}
       </ReactFlow>
@@ -331,7 +331,7 @@ export default function FlowEditor({ initialNodes: propNodes, initialEdges: prop
         <div className="absolute right-0 top-0 bottom-0 w-72 bg-card border-l border-border p-4 overflow-y-auto z-50 shadow-lg">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-foreground text-sm">Propriedades</h3>
-            <button onClick={() => setShowPanel(false)}><X className="w-4 h-4 text-muted-foreground" /></button>
+            <button onClick={() => setShowPanel(false)} aria-label="Fechar painel"><X className="w-4 h-4 text-muted-foreground" /></button>
           </div>
           <div className="space-y-3">
             <div>

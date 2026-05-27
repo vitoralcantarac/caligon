@@ -147,7 +147,7 @@ function SecurityModule() {
             <div className="relative">
               <input type={showPw ? "text" : "password"} value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="Nova senha"
                 className="w-full px-3 py-2.5 rounded-lg border border-border bg-background text-sm outline-none focus:border-accent pr-10" />
-              <button onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <button onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label={showPw ? "Ocultar senha" : "Mostrar senha"}>
                 {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>

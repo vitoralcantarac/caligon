@@ -56,7 +56,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="px-3 pb-4">
-        <button onClick={() => setCollapsed(!collapsed)} className="sidebar-item w-full justify-center">
+        <button onClick={() => setCollapsed(!collapsed)} className="sidebar-item w-full justify-center" aria-label={collapsed ? "Expandir menu" : "Recolher menu"}>
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
       </div>

@@ -33,7 +33,7 @@ export default function AppLayout() {
               <div className="w-9 h-9 rounded-full flex items-center justify-center bg-primary text-primary-foreground font-medium text-sm">
                 {initials}
               </div>
-              <button onClick={signOut} className="p-2 rounded-lg hover:bg-muted transition-colors" title="Sair">
+              <button onClick={signOut} className="p-2 rounded-lg hover:bg-muted transition-colors" title="Sair" aria-label="Sair">
                 <LogOut className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>

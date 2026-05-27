@@ -396,7 +396,7 @@ export default function Questionnaire() {
         <div className="border-t border-border pt-4">
           <div className="flex items-center gap-2">
             <button onClick={handleGoBack} disabled={messages.filter(m => m.role === "user").length === 0}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30" title="Voltar">
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30" title="Voltar" aria-label="Voltar">
               <ArrowLeft className="w-4 h-4" />
             </button>
             {!isLastAiMultipleChoice && (
@@ -405,7 +405,7 @@ export default function Questionnaire() {
                 placeholder="Sua resposta..." className="flex-1 px-4 py-2.5 rounded-lg border border-border bg-background text-sm text-foreground outline-none focus:border-accent" />
             )}
             <button onClick={() => handleSubmitAnswer(true)}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Pular pergunta">
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Pular pergunta" aria-label="Pular pergunta">
               <SkipForward className="w-4 h-4" />
             </button>
             <button onClick={() => handleSubmitAnswer()} className="btn-gold px-4 py-2.5">
