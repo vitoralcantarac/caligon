@@ -18,7 +18,7 @@ import { toast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
-  const [paymentModal, setPaymentModal] = useState<{ open: boolean; analysisId?: string; userId?: string; companyName?: string }>({ open: false });
+  const [paymentModal, setPaymentModal] = useState<{ open: boolean; analysisId?: string; userId?: string; companyName?: string; clientEmail?: string }>({ open: false });
   const [paymentForm, setPaymentForm] = useState({ planSlug: "single", method: "pix", installments: 1, notes: "" });
   const [submitting, setSubmitting] = useState(false);
 
@@ -119,7 +119,7 @@ export default function Dashboard() {
       });
       return;
     }
-    setPaymentModal({ open: true, analysisId: opp.id, userId, companyName: opp.clients?.name });
+    setPaymentModal({ open: true, analysisId: opp.id, userId, companyName: opp.clients?.name, clientEmail: opp.clients?.email });
     setPaymentForm({ planSlug: "single", method: "pix", installments: 1, notes: "" });
   }
 
@@ -136,6 +136,19 @@ export default function Dashboard() {
         notes: paymentForm.notes || undefined,
       });
       toast({ title: "Pagamento registrado", description: `Diagnóstico desbloqueado para ${paymentModal.companyName || 'o cliente'}.` });
+
+      // Enviar email de confirmação ao cliente (non-blocking)
+      if (paymentModal.clientEmail && paymentModal.analysisId) {
+        const resultUrl = `${window.location.origin}${window.location.pathname}#/resultado/${paymentModal.analysisId}`;
+        supabase.functions.invoke("send-email", {
+          body: {
+            type: "payment_confirmed",
+            to: paymentModal.clientEmail,
+            data: { companyName: paymentModal.companyName ?? "", resultUrl },
+          },
+        }).catch(() => {});
+      }
+
       setPaymentModal({ open: false });
       queryClient.invalidateQueries({ queryKey: ['dashboard-opportunities'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-saas-metrics'] });

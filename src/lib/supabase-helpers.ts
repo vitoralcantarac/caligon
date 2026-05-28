@@ -319,6 +319,24 @@ export async function runDiagnosis(analysisId: string) {
   } as any).eq("id", analysisId);
 
   await logAudit("diagnosis_complete", "analysis", analysisId);
+
+  // Notificar o cliente por email (non-blocking — falha de email não quebra o fluxo)
+  const clientEmail = (clientData as any)?.email;
+  if (clientEmail) {
+    const resultUrl = `${window.location.origin}${window.location.pathname.replace(/\/[^/]*$/, "")}#/resultado/${analysisId}`;
+    supabase.functions.invoke("send-email", {
+      body: {
+        type: "diagnosis_completed",
+        to: clientEmail,
+        data: {
+          companyName: (clientData as any)?.name ?? "",
+          estimatedLoss: fa.monthlyLoss || lcs.totalMonthly || 0,
+          resultUrl,
+        },
+      },
+    }).catch(() => {});
+  }
+
   return diagnosis;
 }
 

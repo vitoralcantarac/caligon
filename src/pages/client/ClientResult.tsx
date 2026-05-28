@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Lock, Star, TrendingDown, TrendingUp, ShieldCheck, AlertTriangle, CheckCircle2, ArrowLeft, Download } from "lucide-react";
 import { generateClientReport } from "@/lib/pdf-generator";
+import { track } from "@/lib/analytics";
 
 const PIX_KEY = "contato@caligon.com.br";
 const CONTACT = "WhatsApp (11) 99999-9999";
@@ -78,6 +79,12 @@ export default function ClientResult() {
       setScores(sRes.data || []);
       setHasAccess(accessRes.hasAccess);
       setLoading(false);
+      track("result_viewed", {
+        analysisId: id,
+        hasAccess: accessRes.hasAccess,
+        accessType: accessRes.accessType,
+        estimatedLoss: Number(aRes.data?.estimated_loss ?? 0),
+      });
     })();
   }, [id]);
 
@@ -266,7 +273,10 @@ export default function ClientResult() {
               <p className="text-sm text-muted-foreground">ou 12x de R$ 33,08 sem juros</p>
             </div>
 
-            <Button size="lg" className="w-full text-lg py-6" onClick={() => setShowPayment(true)}>
+            <Button size="lg" className="w-full text-lg py-6" onClick={() => {
+              setShowPayment(true);
+              track("paywall_unlock_clicked", { analysisId: id, estimatedLoss: monthlyLoss });
+            }}>
               Desbloquear agora — R$ 397
             </Button>
 

@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Brain, Lightbulb, Send, ArrowLeft, SkipForward, CheckCircle2, Sparkles } from "lucide-react";
+import { Loader2, Brain, Lightbulb, Send, ArrowLeft, SkipForward, CheckCircle2, Sparkles, AlertCircle, RefreshCw } from "lucide-react";
 import { runDiagnosis } from "@/lib/supabase-helpers";
+import { track } from "@/lib/analytics";
 
 interface Message {
   id: string;
@@ -61,6 +62,8 @@ export default function ClientQuestionnaire() {
   const [scaleValue, setScaleValue] = useState(5);
   const [completed, setCompleted] = useState(false);
   const [diagnosing, setDiagnosing] = useState(false);
+  const [diagnosisError, setDiagnosisError] = useState<string | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,6 +73,17 @@ export default function ClientQuestionnaire() {
   useEffect(() => {
     loadAnalysisAndStart();
   }, [analysisId]);
+
+  // Avisa o usuário ao tentar fechar/sair enquanto o questionário está em andamento
+  useEffect(() => {
+    if (completed) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [completed]);
 
   const answeredCount = messages.filter((m) => m.role === "user").length;
 
@@ -127,6 +141,7 @@ export default function ClientQuestionnaire() {
           }
         }
         setMessages(restored);
+        setInitialLoading(false);
         if (session.completed) {
           setCompleted(true);
           startDiagnosis();
@@ -144,6 +159,8 @@ export default function ClientQuestionnaire() {
       .single();
     if (newSession) {
       setSessionId(newSession.id);
+      track("questionnaire_started", { analysisId, niche: analysis?.clients?.niche });
+      setInitialLoading(false);
       generateNextQuestion(newSession.id, analysis);
     }
   };
@@ -250,11 +267,15 @@ export default function ClientQuestionnaire() {
   const startDiagnosis = async () => {
     if (!analysisId || diagnosing) return;
     setDiagnosing(true);
+    setDiagnosisError(null);
     try {
       await runDiagnosis(analysisId);
+      track("questionnaire_diagnosis_completed", { analysisId });
       navigate(`/resultado/${analysisId}`);
     } catch (err: any) {
-      toast.error(err?.message || "Erro ao gerar diagnóstico");
+      const message = err?.message || "Erro ao gerar diagnóstico";
+      setDiagnosisError(message);
+      track("questionnaire_diagnosis_failed", { analysisId, error: message });
       setDiagnosing(false);
     }
   };
@@ -322,6 +343,7 @@ export default function ClientQuestionnaire() {
         .eq("id", analysisId);
       setProgress(100);
       setCompleted(true);
+      track("questionnaire_completed", { analysisId, totalAnswers: newCount });
       startDiagnosis();
       return;
     }
@@ -334,7 +356,19 @@ export default function ClientQuestionnaire() {
   const isScale = lastAi?.questionType === "scale";
   const canSkip = phase !== "loss_measurement";
 
-  // Completion screen
+  // Tela de carregamento inicial (enquanto busca sessão e primeira pergunta)
+  if (initialLoading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <Loader2 className="w-8 h-8 animate-spin text-accent mx-auto" />
+          <p className="text-sm text-muted-foreground">Carregando seu diagnóstico...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Tela de conclusão / geração do diagnóstico
   if (completed) {
     return (
       <div className="max-w-2xl mx-auto py-12 px-4 animate-fade-in">
@@ -349,29 +383,49 @@ export default function ClientQuestionnaire() {
             </p>
           </div>
 
-          <div className="card-premium p-8 space-y-4">
-            <div className="flex items-center justify-center gap-3">
-              <Sparkles className="w-6 h-6 text-accent animate-pulse" />
-              <p className="font-semibold text-foreground">Nossa IA está analisando suas respostas</p>
+          {diagnosisError ? (
+            <div className="card-premium p-8 space-y-4">
+              <div className="flex items-center justify-center gap-3 text-destructive">
+                <AlertCircle className="w-6 h-6" />
+                <p className="font-semibold">Algo deu errado ao gerar o diagnóstico</p>
+              </div>
+              <p className="text-sm text-muted-foreground">{diagnosisError}</p>
+              <button
+                onClick={startDiagnosis}
+                className="btn-gold px-6 py-3 flex items-center gap-2 mx-auto"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Tentar novamente
+              </button>
+              <p className="text-xs text-muted-foreground">
+                Suas respostas estão salvas — pode tentar novamente sem refazer o questionário.
+              </p>
             </div>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin text-accent" />
-                <span>Calculando perdas financeiras...</span>
+          ) : (
+            <div className="card-premium p-8 space-y-4">
+              <div className="flex items-center justify-center gap-3">
+                <Sparkles className="w-6 h-6 text-accent animate-pulse" />
+                <p className="font-semibold text-foreground">Nossa IA está analisando suas respostas</p>
               </div>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin text-accent" />
-                <span>Identificando gargalos operacionais...</span>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                  <span>Calculando perdas financeiras...</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                  <span>Identificando gargalos operacionais...</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                  <span>Gerando recomendações personalizadas...</span>
+                </div>
               </div>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin text-accent" />
-                <span>Gerando recomendações personalizadas...</span>
-              </div>
+              <p className="text-xs text-muted-foreground pt-3 border-t border-border">
+                Isso pode levar de 30 a 90 segundos. Não feche esta página.
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground pt-3 border-t border-border">
-              Isso pode levar de 30 a 90 segundos. Não feche esta página.
-            </p>
-          </div>
+          )}
         </div>
       </div>
     );

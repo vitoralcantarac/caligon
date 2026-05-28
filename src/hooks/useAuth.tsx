@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { identifyUser, resetAnalyticsUser } from "@/lib/analytics";
 
 interface AuthContextType {
   user: User | null;
@@ -38,9 +39,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         setTimeout(() => fetchUserData(session.user.id), 0);
+        identifyUser(session.user.id, { email: session.user.email });
       } else {
         setProfile(null);
         setRole(null);
+        resetAnalyticsUser();
       }
       setLoading(false);
     });
