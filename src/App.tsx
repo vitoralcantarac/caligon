@@ -5,6 +5,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { DevProvider, useDevMode } from "@/contexts/DevContext";
+import { DevPanel } from "@/components/dev/DevPanel";
 import { Loader2 } from "lucide-react";
 
 // Layouts (carregados imediatamente — necessários para o shell da aplicação)
@@ -45,6 +47,7 @@ const PageLoader = () => (
 
 function ProtectedRoute({ children, requireInternal = false }: { children: React.ReactNode; requireInternal?: boolean }) {
   const { user, loading, profile } = useAuth();
+  const { viewMode } = useDevMode();
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--gradient-premium)" }}>
       <Loader2 className="w-8 h-8 animate-spin text-primary-foreground" />
@@ -52,21 +55,23 @@ function ProtectedRoute({ children, requireInternal = false }: { children: React
   );
   if (!user) return <Navigate to={requireInternal ? "/login" : "/entrar"} replace />;
 
-  const userType = (profile as any)?.user_type || "client";
-  if (requireInternal && userType === "client") return <Navigate to="/dashboard" replace />;
-  if (!requireInternal && userType === "internal") return <Navigate to="/" replace />;
+  const realType = (profile as any)?.user_type || "client";
+  const effectiveType = realType === "internal" ? viewMode : realType;
+  if (requireInternal && effectiveType === "client") return <Navigate to="/dashboard" replace />;
+  if (!requireInternal && effectiveType === "internal") return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <HashRouter>
-        <AuthProvider>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
+    <DevProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <HashRouter>
+          <AuthProvider>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
               {/* Public — internal */}
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
@@ -98,11 +103,13 @@ const App = () => (
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </AuthProvider>
-      </HashRouter>
-    </TooltipProvider>
+              </Routes>
+            </Suspense>
+            <DevPanel />
+          </AuthProvider>
+        </HashRouter>
+      </TooltipProvider>
+    </DevProvider>
   </QueryClientProvider>
 );
 

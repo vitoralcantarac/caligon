@@ -17,6 +17,7 @@ Este arquivo fornece orientações ao Claude Code (claude.ai/code) ao trabalhar 
 ```bash
 npm run dev          # Servidor de desenvolvimento na porta 8080
 npm run build        # Build de produção → dist/
+npm run build:local  # Build com caminhos relativos → dist-local/ (para Live Server / abrir sem servidor)
 npm run preview      # Pré-visualizar build de produção
 npm run lint         # ESLint
 npm run typecheck    # Verificação de tipos TypeScript (sem emissão)
@@ -35,9 +36,20 @@ Copie `.env.example` para `.env.local` e preencha as credenciais do Supabase:
 ```
 VITE_SUPABASE_URL=...
 VITE_SUPABASE_ANON_KEY=...
+VITE_POSTHOG_KEY=...          # Analytics PostHog (opcional em dev — desativado automaticamente)
+VITE_POSTHOG_HOST=...         # Opcional; padrão: https://us.i.posthog.com
 ```
 
-As Edge Functions também precisam de `ANTHROPIC_API_KEY` configurado nos secrets do projeto Supabase (nunca no frontend).
+As Edge Functions também precisam de `ANTHROPIC_API_KEY` e `RESEND_API_KEY` configurados nos secrets do projeto Supabase (nunca no frontend).
+
+## Visualização local (Live Server / sem terminal)
+
+O projeto pode ser visualizado de duas formas:
+
+1. **Desenvolvimento (recomendado):** `npm run dev` → `http://localhost:8080/caligon/`
+2. **Live Server / estático:** `npm run build:local` → aponta o Live Server para a pasta `dist-local/`
+
+O `.vscode/settings.json` já configura o Live Server para servir de `dist-local/` automaticamente. Abra o VS Code a partir desta pasta (`caligon-main/`) para que as configurações sejam lidas corretamente.
 
 ## Arquitetura
 
@@ -50,7 +62,11 @@ O app possui dois painéis distintos com roteamento e layouts separados:
 - **Painel interno** (rotas `/`, `AppLayout`/`Sidebar`) — para consultores que gerenciam análises de clientes
 - **Painel do cliente** (rotas `/dashboard`, `/resultado/:id`, `/planos`, etc., `ClientLayout`) — para donos de PMEs visualizando seus próprios diagnósticos. Nota: as rotas **não** usam prefixo `/client/`.
 
-A autenticação é feita via Supabase Auth. O hook `useAuth` fornece `user`, `profile` e `loading`. `profile.user_type` é `'internal'` ou `'client'`; a lógica de acesso está em `src/lib/access-control.ts`.
+A autenticação é feita via Supabase Auth. O hook `useAuth` fornece `user`, `session`, `profile`, `role` e `loading`. `profile.user_type` é `'internal'` ou `'client'`; `role` vem da tabela `user_roles`. A lógica de acesso está em `src/lib/access-control.ts`. Ao autenticar, `useAuth` chama `identifyUser()` do analytics; ao sair, chama `resetAnalyticsUser()`.
+
+### Painel de Dev (DevPanel)
+
+Usuários com `user_type = 'internal'` veem um painel flutuante fixo no canto inferior direito que permite alternar entre a view de admin e cliente sem trocar de conta. Implementado em `src/components/dev/DevPanel.tsx` com estado em `src/contexts/DevContext.tsx`. O `viewMode` é persistido em `localStorage`. O `ProtectedRoute` em `App.tsx` usa `effectiveType` (viewMode quando admin, user_type real quando cliente) para controlar o roteamento. Clientes nunca veem este painel.
 
 ### Controle de Acesso a Diagnósticos
 
@@ -64,7 +80,7 @@ Se nenhum nível for satisfeito, retorna `accessType: "none"`. O `accessType` re
 
 ### Ciclo de Vida da Análise
 
-Uma análise percorre 8 status: `cadastro → documentos → metricas → questionario → processando → concluido → revisao → entregue`. A maior parte da UI em `src/pages/AnalysisDetail.tsx` e suas abas filhas em `src/components/analysis/tabs/` é controlada por esse status.
+Uma análise percorre 9 status: `cadastro → documentos → metricas → questionario → processando → fluxogramas → concluido → revisao → entregue`. O `run_diagnosis` atualiza para `fluxogramas` (progress=70) após salvar scores, gargalos, recomendações e fluxogramas. A maior parte da UI em `src/pages/AnalysisDetail.tsx` e suas abas filhas em `src/components/analysis/tabs/` é controlada por esse status.
 
 ### Camada de IA
 
@@ -78,7 +94,7 @@ Um prompt de conhecimento universal (`src/lib/business-intelligence.ts`) é inje
 
 O pipeline de extração de documentos está em `supabase/functions/extract-documents/` — baixa os arquivos enviados do Supabase Storage, faz o parse e salva `parsed_content` na tabela `documents` para alimentar chamadas de IA subsequentes.
 
-Antes de trabalhar na camada de IA ou no fluxo de diagnóstico, leia os documentos em `caligon-main/docs/`:
+Antes de trabalhar na camada de IA ou no fluxo de diagnóstico, leia os documentos em `docs/`:
 - `IA.md` — modelos usados por ação, persona do consultor, metodologias (TOC, Lean, Root Cause Analysis), estrutura do JSON de retorno
 - `ARQUITETURA.md` — diagrama de tabelas, fluxo completo de dados, políticas RLS
 - `DEMO.md` — walkthrough ponta a ponta com caso real (Pizzaria), útil para entender o fluxo esperado
@@ -87,7 +103,7 @@ Antes de trabalhar na camada de IA ou no fluxo de diagnóstico, leia os document
 
 Todas as tabelas do Supabase usam Row Level Security. As 15 tabelas principais são: `profiles`, `clients`, `analyses`, `questionnaire_sessions`, `questionnaire_questions`, `questionnaire_responses`, `analysis_scores`, `bottlenecks`, `recommendations`, `flowcharts`, `documents`, `plans`, `payments/subscriptions/unlocked_diagnostics`, `audit_logs`, `diagnosis_ratings` (avaliações de diagnóstico pelo cliente: rating 1–5, comment, helpful_recommendations, would_recommend).
 
-Funções auxiliares de alto nível que encapsulam chamadas ao Supabase estão em `src/lib/supabase-helpers.ts`. O registro de auditoria é feito via `logAudit()` no mesmo arquivo para ações importantes.
+Funções auxiliares de alto nível que encapsulam chamadas ao Supabase estão em `src/lib/supabase-helpers.ts`. O registro de auditoria é feito via `logAudit()` e notificações in-app via `createNotification()` no mesmo arquivo para ações importantes. A tabela `notifications` também existe no banco.
 
 ### Configurações de Domínio
 
@@ -113,4 +129,4 @@ Os quatro tipos de relatório PDF (Técnico, Executivo, Cliente, Comercial) são
 
 ### Deploy
 
-CI/CD roda via `.github/workflows/deploy.yml`: typecheck → build → deploy no GitHub Pages em `/caligon/`. O `base` do Vite está definido como `/caligon/` em `vite.config.ts`.
+CI/CD roda via `.github/workflows/deploy.yml`: typecheck → build → deploy no GitHub Pages em `/caligon/`. O `base` do Vite está definido como `/caligon/` em `vite.config.ts`. O `build:local` usa `vite.config.local.ts` com `base: "./"` e salva em `dist-local/` (gitignored).

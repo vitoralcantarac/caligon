@@ -4,6 +4,7 @@ node_modules/
 # Build
 dist/
 dist-ssr/
+dist-local/
 
 # Variáveis de ambiente — nunca commitar o .env real
 .env
@@ -23,6 +24,7 @@ supabase/.temp/
 # Editor
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 .idea/
 .DS_Store
 *.suo
