@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -16,9 +15,11 @@ import { toast } from "sonner";
 import { Loader2, Lock, Star, TrendingDown, TrendingUp, ShieldCheck, AlertTriangle, CheckCircle2, ArrowLeft, Download } from "lucide-react";
 import { generateClientReport } from "@/lib/pdf-generator";
 import { track } from "@/lib/analytics";
+import PixPaymentModal from "@/components/client/PixPaymentModal";
 
-const PIX_KEY = "contato@caligon.com.br";
-const CONTACT = "WhatsApp (11) 99999-9999";
+function formatPrice(cents: number) {
+  return `R$ ${(cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+}
 
 function CountUp({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
   const [n, setN] = useState(0);
@@ -55,6 +56,7 @@ export default function ClientResult() {
   const [scores, setScores] = useState<any[]>([]);
   const [hasAccess, setHasAccess] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [singlePlan, setSinglePlan] = useState<any>(null);
   const [rating, setRating] = useState(0);
   const [ratingComment, setRatingComment] = useState("");
   const [helpful, setHelpful] = useState(false);
@@ -66,18 +68,20 @@ export default function ClientResult() {
   useEffect(() => {
     if (!id) return;
     (async () => {
-      const [aRes, bRes, rRes, sRes, accessRes] = await Promise.all([
+      const [aRes, bRes, rRes, sRes, accessRes, planRes] = await Promise.all([
         supabase.from("analyses").select("*, clients(name, niche)").eq("id", id).single(),
         supabase.from("bottlenecks").select("*").eq("analysis_id", id).order("estimated_loss", { ascending: false }),
         supabase.from("recommendations").select("*").eq("analysis_id", id).order("priority", { ascending: true }),
         supabase.from("analysis_scores").select("*").eq("analysis_id", id),
         hasAccessToAnalysis(id),
+        supabase.from("plans" as any).select("*").eq("slug", "single").maybeSingle(),
       ]);
       setAnalysis(aRes.data);
       setBottlenecks(bRes.data || []);
       setRecommendations(rRes.data || []);
       setScores(sRes.data || []);
       setHasAccess(accessRes.hasAccess);
+      setSinglePlan(planRes.data);
       setLoading(false);
       track("result_viewed", {
         analysisId: id,
@@ -132,6 +136,7 @@ export default function ClientResult() {
 
   const monthlyLoss = Number(analysis.estimated_loss || 0);
   const monthlySavings = Number(analysis.estimated_savings || 0);
+  const singlePrice = Number(singlePlan?.price_cents ?? 39700);
   const mainScore = scores.find((s) => s.label?.toLowerCase().includes("saúde") || s.label?.toLowerCase().includes("saude")) || scores[0];
   const scoreValue = mainScore?.value || 0;
   const cat = scoreCategory(scoreValue);
@@ -269,15 +274,15 @@ export default function ClientResult() {
             </ul>
 
             <div className="mb-5">
-              <p className="text-5xl font-bold">R$ 397</p>
-              <p className="text-sm text-muted-foreground">ou 12x de R$ 33,08 sem juros</p>
+              <p className="text-5xl font-bold">{formatPrice(singlePrice)}</p>
+              <p className="text-sm text-muted-foreground">ou 12x de {formatPrice(Math.round(singlePrice / 12))} sem juros</p>
             </div>
 
             <Button size="lg" className="w-full text-lg py-6" onClick={() => {
               setShowPayment(true);
               track("paywall_unlock_clicked", { analysisId: id, estimatedLoss: monthlyLoss });
             }}>
-              Desbloquear agora — R$ 397
+              Desbloquear agora — {formatPrice(singlePrice)}
             </Button>
 
             <p className="text-xs text-center mt-4 text-muted-foreground flex items-center justify-center gap-1">
@@ -418,32 +423,13 @@ export default function ClientResult() {
       )}
 
       {/* MODAL DE PAGAMENTO */}
-      <Dialog open={showPayment} onOpenChange={setShowPayment}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Pagamento via Pix</DialogTitle>
-            <DialogDescription>
-              Para desbloquear seu diagnóstico, realize o pagamento via Pix.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">Chave Pix:</p>
-              <p className="font-mono text-lg font-semibold">{PIX_KEY}</p>
-            </div>
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">Valor:</p>
-              <p className="text-2xl font-bold">R$ 397,00</p>
-            </div>
-            <p className="text-sm">
-              Após o pagamento, envie o comprovante para <strong>{CONTACT}</strong>.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Seu diagnóstico será liberado em até 2 horas úteis.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PixPaymentModal
+        open={showPayment}
+        onOpenChange={setShowPayment}
+        plan={singlePlan ? { slug: singlePlan.slug, name: singlePlan.name, price_cents: singlePlan.price_cents } : { slug: "single", name: "Diagnóstico Único", price_cents: singlePrice }}
+        analysisId={id}
+        onPaid={() => setHasAccess(true)}
+      />
     </div>
   );
 }

@@ -3,12 +3,9 @@ import { getActivePlans, getUserCurrentPlan } from "@/lib/access-control";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Check, Loader2 } from "lucide-react";
-
-const PIX_KEY = "contato@caligon.com.br";
-const CONTACT = "WhatsApp (11) 99999-9999";
+import PixPaymentModal from "@/components/client/PixPaymentModal";
 
 function formatPrice(cents: number) {
   return `R$ ${(cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
@@ -130,7 +127,9 @@ export default function ClientPlans() {
           </AccordionItem>
           <AccordionItem value="time">
             <AccordionTrigger>Quanto tempo leva para liberar após o pagamento?</AccordionTrigger>
-            <AccordionContent>Até 2 horas úteis após confirmação do pagamento.</AccordionContent>
+            <AccordionContent>
+              A liberação é automática: pagando pelo QR Code Pix, seu acesso é desbloqueado em segundos.
+            </AccordionContent>
           </AccordionItem>
           <AccordionItem value="warranty">
             <AccordionTrigger>Tenho garantia?</AccordionTrigger>
@@ -140,27 +139,12 @@ export default function ClientPlans() {
       </div>
 
       {/* MODAL DE PAGAMENTO */}
-      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Pagamento — {selected?.name}</DialogTitle>
-            <DialogDescription>Realize o pagamento via Pix para ativar seu plano.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">Valor:</p>
-              <p className="text-2xl font-bold">{selected && formatPrice(selected.price_cents)}</p>
-            </div>
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">Chave Pix:</p>
-              <p className="font-mono font-semibold">{PIX_KEY}</p>
-            </div>
-            <p className="text-sm">
-              Envie o comprovante para <strong>{CONTACT}</strong>. Seu plano será ativado em até 2 horas úteis.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PixPaymentModal
+        open={!!selected}
+        onOpenChange={(o) => !o && setSelected(null)}
+        plan={selected}
+        onPaid={() => getUserCurrentPlan().then(setCurrentPlan)}
+      />
     </div>
   );
 }

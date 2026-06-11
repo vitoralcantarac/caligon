@@ -30,7 +30,7 @@ VITE_POSTHOG_KEY=...          # Analytics PostHog (opcional em dev — desativad
 VITE_POSTHOG_HOST=...         # Opcional; padrão: https://us.i.posthog.com
 ```
 
-As Edge Functions também precisam de `ANTHROPIC_API_KEY` e `RESEND_API_KEY` configurados nos secrets do projeto Supabase (nunca no frontend).
+As Edge Functions também precisam de `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `MP_ACCESS_TOKEN` (Mercado Pago) e `MP_WEBHOOK_SECRET` (assinatura de webhooks, opcional mas recomendado) configurados nos secrets do projeto Supabase (nunca no frontend).
 
 ## Visualização local (Live Server / sem terminal)
 
@@ -70,12 +70,11 @@ Se nenhum nível for satisfeito, retorna `accessType: "none"`. O `accessType` re
 
 ### Pagamentos e Conversão
 
-**Não há gateway de pagamento automatizado** — o fluxo é 100% manual:
+O fluxo principal é **Pix automático via Mercado Pago**, com fallback manual:
 
-1. No painel do cliente (`ClientResult.tsx`), o CTA mostra o preço de R$ 397 (ou 12x R$ 33,08) e abre um modal com a chave Pix `contato@caligon.com.br`. O cliente envia o comprovante via WhatsApp (número hardcoded no código).
-2. O desbloqueio é feito pelo consultor no Dashboard interno (`Dashboard.tsx`): a seção "Oportunidades de conversão" lista diagnósticos concluídos ainda não pagos, e o botão "Registrar pagamento" abre um modal com plano, método (Pix/TED/Cartão/Boleto) e parcelas, que chama `registerManualPayment()`.
-3. O match entre cliente e perfil de usuário é feito por heurística (`ilike` no `full_name`) — ponto frágil a considerar em mudanças nessa área.
-4. Após confirmar, dispara o email `payment_confirmed` ao cliente (non-blocking).
+1. **Automático:** o cliente clica em desbloquear (`ClientResult.tsx` ou `ClientPlans.tsx`) e o `PixPaymentModal` (`src/components/client/PixPaymentModal.tsx`) chama a Edge Function `create-payment`, que lê o preço da tabela `plans` **no servidor** (nunca confiar no valor do navegador), cria a cobrança Pix no Mercado Pago e grava um registro `pending` em `payments`. O modal exibe QR Code + copia-e-cola e faz polling do status. Quando o Pix cai, o Mercado Pago chama a Edge Function `payment-webhook` (com `verify_jwt = false` no `config.toml`), que valida a assinatura, **reconsulta o status na API do MP** (nunca confia no payload do webhook), aprova o `payment`, insere em `unlocked_diagnostics` e/ou cria `subscription`, e dispara o email `payment_confirmed`.
+2. **Fallback manual:** se a geração da cobrança falhar, o modal mostra a chave Pix `contato@caligon.com.br` + WhatsApp, e o consultor registra via `registerManualPayment()` no Dashboard interno (seção "Oportunidades de conversão"). O match cliente↔perfil nesse fluxo é por heurística (`ilike` no `full_name`) — ponto frágil.
+3. Os preços vivem na tabela `plans` (seed + updates em `supabase/migrations/`). O CTA do `ClientResult.tsx` lê o preço do plano `single` do banco (fallback hardcoded de R$ 397 se a query falhar).
 
 O Dashboard interno também exibe métricas SaaS em tempo real: total de clientes (`profiles` com `user_type = 'client'`), diagnósticos gratuitos (analyses sem unlock), diagnósticos pagos (`unlocked_diagnostics`), taxa de conversão (pagos / total) e receita total (soma de `payments` com `status = 'approved'`, em centavos).
 
