@@ -2,16 +2,6 @@
 
 Este arquivo fornece orientações ao Claude Code (claude.ai/code) ao trabalhar com o código neste repositório.
 
-## Atualizações Pendentes
-
-**Ao iniciar qualquer conversa nesta pasta**, verifique se `.claude/pending-updates.md` existe:
-- **Se existir:** leia-o e analise cada arquivo modificado listado. Em seguida:
-  1. **Seções já existentes:** aplique as atualizações diretamente no CLAUDE.md, sem pedir permissão.
-  2. **Possíveis novos tópicos relevantes** (informações que não cabem em nenhuma seção existente): salve as sugestões em `.claude/pending-new-topics.md` — não adicione ao CLAUDE.md ainda.
-  3. Delete `.claude/pending-updates.md`.
-  4. Informe ao usuário: o que foi atualizado automaticamente + se há sugestões de novos tópicos aguardando aprovação em `.claude/pending-new-topics.md`.
-- **Se não existir:** prossiga normalmente.
-
 ## Comandos
 
 ```bash
