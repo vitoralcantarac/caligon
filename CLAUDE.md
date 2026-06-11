@@ -50,7 +50,7 @@ O `.vscode/settings.json` já configura o Live Server para servir de `dist-local
 O app possui dois painéis distintos com roteamento e layouts separados:
 
 - **Painel interno** (rotas `/`, `AppLayout`/`Sidebar`) — para consultores que gerenciam análises de clientes
-- **Painel do cliente** (rotas `/dashboard`, `/resultado/:id`, `/planos`, etc., `ClientLayout`) — para donos de PMEs visualizando seus próprios diagnósticos. Nota: as rotas **não** usam prefixo `/client/`.
+- **Painel do cliente** (`ClientLayout`) — para donos de PMEs visualizando seus próprios diagnósticos. Nota: as rotas **não** usam prefixo `/client/`. Rotas: `/dashboard` (ClientDashboard), `/novo-diagnostico` (ClientNewDiagnosis), `/questionario/:analysisId` (ClientQuestionnaire), `/resultado/:id` (ClientResult, com paywall integrado), `/planos` (ClientPlans), `/minha-conta` (ClientAccount), além das páginas públicas de auth `/cadastro` e `/entrar`.
 
 A autenticação é feita via Supabase Auth. O hook `useAuth` fornece `user`, `session`, `profile`, `role` e `loading`. `profile.user_type` é `'internal'` ou `'client'`; `role` vem da tabela `user_roles`. A lógica de acesso está em `src/lib/access-control.ts`. Ao autenticar, `useAuth` chama `identifyUser()` do analytics; ao sair, chama `resetAnalyticsUser()`.
 
@@ -67,6 +67,17 @@ A função `hasAccessToAnalysis(analysisId)` em `src/lib/access-control.ts` veri
 3. **`subscription`** — assinatura ativa (`subscriptions.status = "active"`, não expirada). Dentro da assinatura: `plans.diagnostics_unlimited` libera tudo; caso contrário, compara `diagnostics_used` com `plans.diagnostics_per_period`.
 
 Se nenhum nível for satisfeito, retorna `accessType: "none"`. O `accessType` retornado também determina qual mensagem de paywall exibir. Qualquer tela que renderize resultados de diagnóstico deve passar por essa verificação antes de exibir o conteúdo.
+
+### Pagamentos e Conversão
+
+**Não há gateway de pagamento automatizado** — o fluxo é 100% manual:
+
+1. No painel do cliente (`ClientResult.tsx`), o CTA mostra o preço de R$ 397 (ou 12x R$ 33,08) e abre um modal com a chave Pix `contato@caligon.com.br`. O cliente envia o comprovante via WhatsApp (número hardcoded no código).
+2. O desbloqueio é feito pelo consultor no Dashboard interno (`Dashboard.tsx`): a seção "Oportunidades de conversão" lista diagnósticos concluídos ainda não pagos, e o botão "Registrar pagamento" abre um modal com plano, método (Pix/TED/Cartão/Boleto) e parcelas, que chama `registerManualPayment()`.
+3. O match entre cliente e perfil de usuário é feito por heurística (`ilike` no `full_name`) — ponto frágil a considerar em mudanças nessa área.
+4. Após confirmar, dispara o email `payment_confirmed` ao cliente (non-blocking).
+
+O Dashboard interno também exibe métricas SaaS em tempo real: total de clientes (`profiles` com `user_type = 'client'`), diagnósticos gratuitos (analyses sem unlock), diagnósticos pagos (`unlocked_diagnostics`), taxa de conversão (pagos / total) e receita total (soma de `payments` com `status = 'approved'`, em centavos).
 
 ### Ciclo de Vida da Análise
 
@@ -89,6 +100,15 @@ Antes de trabalhar na camada de IA ou no fluxo de diagnóstico, leia os document
 - `ARQUITETURA.md` — diagrama de tabelas, fluxo completo de dados, políticas RLS
 - `DEMO.md` — walkthrough ponta a ponta com caso real (Pizzaria), útil para entender o fluxo esperado
 
+### Email Transacional (Resend)
+
+A Edge Function `supabase/functions/send-email/` envia emails via Resend (secret `RESEND_API_KEY`, remetente `noreply@caligon.com.br`). Dois tipos suportados:
+
+- `diagnosis_completed` — disparado em `runDiagnosis()` (`src/lib/supabase-helpers.ts`) se `clientData.email` existir
+- `payment_confirmed` — disparado em `handleRegisterPayment()` (`Dashboard.tsx`) se o email do cliente existir
+
+Ambos são **non-blocking** (`supabase.functions.invoke(...).catch(() => {})`) — falha no envio nunca deve quebrar o fluxo principal. Novos tipos de email devem seguir o mesmo padrão.
+
 ### Dados e Segurança
 
 Todas as tabelas do Supabase usam Row Level Security. As 15 tabelas principais são: `profiles`, `clients`, `analyses`, `questionnaire_sessions`, `questionnaire_questions`, `questionnaire_responses`, `analysis_scores`, `bottlenecks`, `recommendations`, `flowcharts`, `documents`, `plans`, `payments/subscriptions/unlocked_diagnostics`, `audit_logs`, `diagnosis_ratings` (avaliações de diagnóstico pelo cliente: rating 1–5, comment, helpful_recommendations, would_recommend).
@@ -106,6 +126,12 @@ Os arquivos abaixo definem o vocabulário do domínio — consulte-os antes de a
 ### Geração de PDF
 
 Os quatro tipos de relatório PDF (Técnico, Executivo, Cliente, Comercial) são gerados no lado do cliente usando jsPDF. A lógica está em `src/lib/pdf-generator.ts`. É uma dependência pesada — separada em seu próprio chunk `pdf` pelo Vite.
+
+### Analytics (PostHog)
+
+`src/lib/analytics.ts` encapsula o PostHog e exporta: `initAnalytics()` (chamado em `main.tsx` logo após `initSentry()`; em `import.meta.env.DEV` a captura é desativada automaticamente — sem guard manual necessário), `identifyUser(userId, props?)`, `track(event, props?)` e `resetAnalyticsUser()`.
+
+Eventos rastreados atualmente (manter nomes consistentes ao adicionar novos): `questionnaire_started`, `questionnaire_completed`, `questionnaire_diagnosis_completed`, `questionnaire_diagnosis_failed`, `result_viewed`, `paywall_unlock_clicked`.
 
 ### Notas sobre o Frontend
 
