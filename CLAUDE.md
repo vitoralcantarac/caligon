@@ -15,10 +15,13 @@ npm run test         # Vitest (execução única)
 npm run test:watch   # Vitest em modo watch
 ```
 
-Executar um único arquivo de teste:
+Executar um único arquivo de teste, ou um único teste por nome:
 ```bash
 npx vitest run src/test/access-control.test.ts
+npx vitest run -t "nome do teste"
 ```
+
+Os testes usam Vitest com ambiente `jsdom` e `globals: true` (sem imports de `describe`/`it`/`expect`). O setup global fica em `src/test/setup.ts` e o padrão de descoberta é `src/**/*.{test,spec}.{ts,tsx}` (ver `vitest.config.ts`).
 
 ## Ambiente
 
@@ -86,11 +89,29 @@ Uma análise percorre 9 status: `cadastro → documentos → metricas → questi
 
 As chamadas de IA nunca partem diretamente do navegador. Todas as chamadas à Claude API rodam dentro das Supabase Edge Functions (runtime Deno) em `supabase/functions/questionnaire-ai/`. A função expõe três ações via body HTTP:
 
-- `run_qualification` — avalia os dados iniciais da empresa
+- `run_qualification` — avalia os dados iniciais da empresa (Claude Haiku 4.5)
 - `generate_question` — retorna a próxima pergunta adaptativa do questionário (Claude Haiku 4.5)
 - `run_diagnosis` — processa todas as 57 respostas e retorna um JSON estruturado com scores, gargalos, recomendações, fluxogramas e sumário executivo (Claude Sonnet 4.6)
 
-Um prompt de conhecimento universal (`src/lib/business-intelligence.ts`) é injetado em todos os diagnósticos via `getUniversalIntelligence()`. Ele fornece à IA fundamentos de TOC, anatomia financeira de PMEs (DRE, ponto de equilíbrio, armadilhas de caixa), metodologia de quantificação de perdas em três tiers e perguntas confrontadoras universais — garantindo consistência do raciocínio entre nichos.
+**Onde editar o prompt:** o conhecimento de negócio que guia o diagnóstico está **embutido inline** em `supabase/functions/questionnaire-ai/index.ts` (arquivo de ~1600 linhas) — é o único lugar que afeta o comportamento da IA em produção. Atenção a duas armadilhas: existem **outras duas cópias** do mesmo conhecimento que **não estão conectadas** ao prompt atual e não devem ser tratadas como fonte de verdade:
+- `src/lib/business-intelligence.ts` (`getUniversalIntelligence()`) — definido mas **nunca chamado** em `src/` (código morto no frontend; runtime Deno também não importa frontend).
+- `supabase/functions/_shared/knowledge-base.ts` (`UNIVERSAL_BUSINESS_INTELLIGENCE`) — pensado para ser importado por Edge Functions, mas **nenhuma função o importa hoje**.
+
+Esse conhecimento fornece à IA fundamentos de TOC, anatomia financeira de PMEs (DRE, ponto de equilíbrio, armadilhas de caixa), metodologia de quantificação de perdas em três tiers e perguntas confrontadoras universais — garantindo consistência do raciocínio entre nichos.
+
+### Edge Functions (visão geral)
+
+São 5 funções em `supabase/functions/` (runtime Deno). Por padrão exigem JWT; o `config.toml` declara `verify_jwt = false` apenas para `payment-webhook` (chamada externa pelo Mercado Pago) e o `project_id`.
+
+| Função | Papel | `verify_jwt` |
+|---|---|---|
+| `questionnaire-ai` | IA: `run_qualification` + `generate_question` (Haiku 4.5), `run_diagnosis` (Sonnet 4.6) | padrão |
+| `extract-documents` | baixa arquivos do Storage, faz parse e grava `documents.parsed_content` | padrão |
+| `create-payment` | cria cobrança Pix no Mercado Pago (preço lido da tabela `plans` no servidor) | padrão |
+| `payment-webhook` | recebe callback do MP, revalida status na API e libera acesso | **`false`** |
+| `send-email` | emails transacionais via Resend | padrão |
+
+Código compartilhado entre funções fica em `supabase/functions/_shared/`.
 
 O pipeline de extração de documentos está em `supabase/functions/extract-documents/` — baixa os arquivos enviados do Supabase Storage, faz o parse e salva `parsed_content` na tabela `documents` para alimentar chamadas de IA subsequentes.
 
@@ -145,3 +166,9 @@ Eventos rastreados atualmente (manter nomes consistentes ao adicionar novos): `q
 ### Deploy
 
 CI/CD roda via `.github/workflows/deploy.yml`: typecheck → build → deploy no GitHub Pages em `/caligon/`. O `base` do Vite está definido como `/caligon/` em `vite.config.ts`. O `build:local` usa `vite.config.local.ts` com `base: "./"` e salva em `dist-local/` (gitignored).
+
+O build separa o bundle em 4 chunks manuais (`vite.config.ts` → `manualChunks`): `vendor` (react/router), `pdf` (jspdf), `flow` (@xyflow/react) e `charts` (recharts).
+
+### Migrations
+
+São 12 arquivos SQL em `supabase/migrations/` (datados de 2026), aplicados em ordem cronológica pelo nome. Preços de planos são versionados aqui — a mais recente é `20260610150000_atualiza_precos_planos.sql`. Ao mudar preços, crie uma nova migration em vez de editar o seed.
